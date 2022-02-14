@@ -80,6 +80,7 @@ object Main extends IOApp {
       fileName: String,
       xa: util.transactor.Transactor[IO]
   ) = {
+    val infoMessage = Stream.eval(IO(println("Importing reviews...")))
     val truncateTable =
       Stream.eval(sql"TRUNCATE TABLE reviews".update.run.transact(xa))
 
@@ -116,7 +117,7 @@ object Main extends IOApp {
         """.update.run.transact(xa))
     }
 
-    truncateTable ++ insertReviews;
+    infoMessage ++ truncateTable ++ insertReviews;
   }
 
   def run(args: List[String]): IO[ExitCode] =
