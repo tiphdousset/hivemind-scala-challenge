@@ -23,3 +23,17 @@ To run with previously-populated reviews db:
 ```
 $ docker compose up
 ```
+
+## Test
+
+```
+$ docker compose -f docker-development.yml up -d
+$ docker ps
+$ docker attach <mozilla/sbt container ID>
+```
+
+Once in the SBT console:
+
+```
+sbt:scalachallenge> test
+```
