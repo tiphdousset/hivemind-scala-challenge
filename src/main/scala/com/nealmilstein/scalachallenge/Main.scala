@@ -1,7 +1,6 @@
 package com.nealmilstein.scalachallenge
 
 import cats.effect._
-import cats.implicits._
 import cats.effect.{Blocker, ExitCode, IO, IOApp}
 
 import doobie._
@@ -14,6 +13,17 @@ import io.circe._, io.circe.generic.semiauto._, io.circe.parser._
 import fs2.{Stream, text}
 
 import java.nio.file.Paths
+
+final case class Review(
+    asin: String,
+    reviewerID: String,
+    reviewerName: String,
+    helpful: List[Int],
+    reviewText: String,
+    overall: Float,
+    summary: String,
+    unixReviewTime: Long
+)
 
 object Main extends IOApp {
   val transactor: Resource[IO, HikariTransactor[IO]] =
