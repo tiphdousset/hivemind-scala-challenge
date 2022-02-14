@@ -23,23 +23,36 @@ final case class BestRatedRequest(
 object Routes {
   def reviewRoutes[F[_]: Sync](xa: transactor.Transactor[F]): HttpRoutes[F] = {
     def reverseDate(date: String) = date.split('.').reverse.mkString(".")
+    val dateRegex = raw"\d{2}\.\d{2}\.\d{4}"
 
     val dsl = new Http4sDsl[F] {}
     import dsl._
     HttpRoutes.of[F] { case req @ POST -> Root / "amazon" / "best-rated" =>
       for {
-        requestJson <- req.as[BestRatedRequest]
-        bestRatings <- sql"""
-          SELECT asin, AVG(overall)
-          FROM reviews
-          WHERE created_at > CAST(${reverseDate(requestJson.start)} AS TIMESTAMP)
-            AND created_at < CAST(${reverseDate(requestJson.end)} AS TIMESTAMP)
-          GROUP BY asin
-          HAVING COUNT(id) >= ${requestJson.min_number_reviews}
-          ORDER BY AVG DESC
-          LIMIT ${requestJson.limit}
-        """.query[(String, Float)].to[List].transact(xa)
-        resp <- Ok(bestRatings)
+        decoded <- req.attemptAs[BestRatedRequest].value
+        resp <- {
+          decoded match {
+            case Left(_) => BadRequest()
+            case Right(json)
+                if !json.start.matches(dateRegex)
+                  || !json.end.matches(dateRegex) =>
+              BadRequest()
+            case Right(requestJson) =>
+              for {
+                bestRatings <- sql"""
+                SELECT asin, AVG(overall)
+                FROM reviews
+                WHERE created_at > CAST(${reverseDate(requestJson.start)} AS TIMESTAMP)
+                  AND created_at < CAST(${reverseDate(requestJson.end)} AS TIMESTAMP)
+                GROUP BY asin
+                HAVING COUNT(id) >= ${requestJson.min_number_reviews}
+                ORDER BY AVG DESC
+                LIMIT ${requestJson.limit}
+              """.query[(String, Float)].to[List].transact(xa)
+                resp <- Ok(bestRatings)
+              } yield resp
+          }
+        }
       } yield resp
     }
   }
