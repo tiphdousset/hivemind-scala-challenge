@@ -1,7 +1,0 @@
-from mozilla/sbt
-WORKDIR /code
-COPY build.sbt /code
-COPY src /code
-COPY project /code
-#ENTRYPOINT sbt
-CMD ["sbt", "run"]
