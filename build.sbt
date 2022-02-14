@@ -3,7 +3,8 @@ val CirceVersion = "0.13.0"
 val MunitVersion = "0.7.27"
 val LogbackVersion = "1.2.5"
 val MunitCatsEffectVersion = "1.0.5"
-val doobieVersion = "0.13.4"
+val DoobieVersion = "0.13.4"
+val fs2Version = "2.5.10"
 
 lazy val root = (project in file("."))
   .settings(
@@ -21,9 +22,12 @@ lazy val root = (project in file("."))
       "org.typelevel" %% "munit-cats-effect-2" % MunitCatsEffectVersion % Test,
       "ch.qos.logback" % "logback-classic" % LogbackVersion,
       "org.scalameta" %% "svm-subs" % "20.2.0",
-      "org.tpolecat" %% "doobie-core" % doobieVersion,
-      "org.tpolecat" %% "doobie-postgres" % doobieVersion,
-      "org.tpolecat" %% "doobie-hikari" % doobieVersion
+      "org.tpolecat" %% "doobie-core" % DoobieVersion,
+      "org.tpolecat" %% "doobie-postgres" % DoobieVersion,
+      "org.tpolecat" %% "doobie-hikari" % DoobieVersion,
+      "co.fs2" %% "fs2-core" % fs2Version,
+      "co.fs2" %% "fs2-io" % fs2Version,
+      "io.circe" %% "circe-parser" % CirceVersion
     ),
     addCompilerPlugin(
       "org.typelevel" %% "kind-projector" % "0.13.0" cross CrossVersion.full

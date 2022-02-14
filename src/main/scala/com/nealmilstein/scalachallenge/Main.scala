@@ -1,12 +1,19 @@
 package com.nealmilstein.scalachallenge
 
 import cats.effect._
-// import cats.implicits._
+import cats.implicits._
 import cats.effect.{Blocker, ExitCode, IO, IOApp}
 
 import doobie._
-// import doobie.implicits._
+import doobie.implicits._
 import doobie.hikari._
+import doobie.util
+
+import io.circe._, io.circe.generic.semiauto._, io.circe.parser._
+
+import fs2.{Stream, text}
+
+import java.nio.file.Paths
 
 object Main extends IOApp {
   val transactor: Resource[IO, HikariTransactor[IO]] =
@@ -22,8 +29,90 @@ object Main extends IOApp {
       )
     } yield xa
 
+  def initTable(xa: util.transactor.Transactor[IO]): IO[Unit] = {
+    for {
+      _ <- sql"""
+          CREATE TABLE reviews (
+            id integer generated always as identity NOT NULL,
+            asin text NOT NULL,
+            reviewerID text NOT NULL,
+            reviewerName text NOT NULL,
+            helpfulNumerator integer NOT NULL,
+            helpfulDenominator integer NOT NULL,
+            reviewText text NOT NULL,
+            overall integer NOT NULL,
+            summary text NOT NULL,
+            created_at timestamp with time zone NOT NULL,
+            PRIMARY KEY(id)
+          );
+        """.update.run.transact(xa)
+      _ <- sql"CREATE INDEX reviews_asin ON reviews (asin);".update.run
+        .transact(xa)
+      _ <-
+        sql"CREATE INDEX reviews_reveiwerID ON reviews (reviewerID);".update.run
+          .transact(xa)
+    } yield ()
+  }
+
+  def initSchema(xa: util.transactor.Transactor[IO]): IO[Unit] = {
+    for {
+      doesTableExist <- sql"""
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables
+          WHERE table_name = 'reviews'
+        );
+      """.query[Boolean].unique.transact(xa)
+      _ <- if (!doesTableExist) initTable(xa) else IO.unit
+    } yield ()
+  }
+
+  def importReviews(
+      fileName: String,
+      xa: util.transactor.Transactor[IO]
+  ) = {
+    val reviewDecoder: Decoder[Review] = deriveDecoder
+    Stream.resource(Blocker[IO]).flatMap { blocker =>
+      fs2.io.file
+        .readAll[IO](Paths.get(fileName), blocker, 4096)
+        .through(text.utf8Decode)
+        .through(text.lines)
+        .map(line => reviewDecoder.decodeJson(parse(line).getOrElse(Json.Null)))
+        .collect { case Right(review) => review }
+        .evalMap(review => sql"""
+          INSERT INTO reviews (
+            asin,
+            reviewerID,
+            reviewerName,
+            helpfulNumerator,
+            helpfulDenominator,
+            reviewText,
+            overall,
+            summary,
+            created_at
+          ) VALUES (
+            ${review.asin},
+            ${review.reviewerID},
+            ${review.reviewerName},
+            ${review.helpful(0)},
+            ${review.helpful(1)},
+            ${review.reviewText},
+            ${review.overall},
+            ${review.summary},
+            to_timestamp(${review.unixReviewTime})
+          )
+        """.update.run.transact(xa))
+    }
+  }
+
   def run(args: List[String]): IO[ExitCode] =
     transactor.use { xa =>
-      Server.stream[IO](xa).compile.drain.as(ExitCode.Success)
+      for {
+        _ <- initSchema(xa)
+        _ <-
+          if (args.length > 0)
+            importReviews(args(0), xa).compile.drain.as(IO.unit)
+          else IO.unit
+        // _ <- Server.stream[IO](xa).compile.drain.as(ExitCode.Success)
+      } yield (ExitCode.Success)
     }
 }
