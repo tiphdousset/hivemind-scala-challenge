@@ -36,16 +36,15 @@ object Routes {
     HttpRoutes.of[F] { case req @ POST -> Root / "amazon" / "best-rated" =>
       for {
         decoded <- req.attemptAs[BestRatedRequest].value
-        resp <- {
-          decoded match {
-            case Left(_) => BadRequest()
-            case Right(json)
-                if !json.start.matches(dateRegex)
-                  || !json.end.matches(dateRegex) =>
-              BadRequest()
-            case Right(requestJson) =>
-              for {
-                bestRatings <- sql"""
+        resp <- decoded match {
+          case Left(_) => BadRequest()
+          case Right(json)
+              if !json.start.matches(dateRegex)
+                || !json.end.matches(dateRegex) =>
+            BadRequest()
+          case Right(requestJson) =>
+            for {
+              bestRatings <- sql"""
                   SELECT asin, AVG(overall)
                   FROM reviews
                   WHERE created_at > CAST(${reverseDate(requestJson.start)} AS TIMESTAMP)
@@ -55,13 +54,12 @@ object Routes {
                   ORDER BY AVG DESC
                   LIMIT ${requestJson.limit}
                 """.query[(String, Float)].to[List].transact(xa)
-                resp <- Ok(
-                  bestRatings.map(rating =>
-                    ProductRatingAverage(rating._1, rating._2)
-                  )
+              resp <- Ok(
+                bestRatings.map(rating =>
+                  ProductRatingAverage(rating._1, rating._2)
                 )
-              } yield resp
-          }
+              )
+            } yield resp
         }
       } yield resp
     }
