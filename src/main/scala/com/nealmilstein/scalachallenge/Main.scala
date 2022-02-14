@@ -70,8 +70,11 @@ object Main extends IOApp {
       fileName: String,
       xa: util.transactor.Transactor[IO]
   ) = {
+    val truncateTable =
+      Stream.eval(sql"TRUNCATE TABLE reviews".update.run.transact(xa))
+
     val reviewDecoder: Decoder[Review] = deriveDecoder
-    Stream.resource(Blocker[IO]).flatMap { blocker =>
+    val insertReviews = Stream.resource(Blocker[IO]).flatMap { blocker =>
       fs2.io.file
         .readAll[IO](Paths.get(fileName), blocker, 4096)
         .through(text.utf8Decode)
@@ -102,6 +105,8 @@ object Main extends IOApp {
           )
         """.update.run.transact(xa))
     }
+
+    truncateTable ++ insertReviews;
   }
 
   def run(args: List[String]): IO[ExitCode] =
