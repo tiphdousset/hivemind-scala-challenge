@@ -1,7 +1,6 @@
 package com.nealmilstein.scalachallenge
 
 import cats.effect.{ConcurrentEffect, Timer}
-import cats.implicits._
 import doobie.util.transactor
 import fs2.Stream
 import org.http4s.client.blaze.BlazeClientBuilder
@@ -17,7 +16,7 @@ object Server {
   )(implicit T: Timer[F]): Stream[F, Nothing] = {
 
     for {
-      client <- BlazeClientBuilder[F](global).stream
+      _ <- BlazeClientBuilder[F](global).stream
       httpApp = Routes.reviewRoutes[F](xa).orNotFound
       finalHttpApp = Logger.httpApp(true, true)(httpApp)
 
