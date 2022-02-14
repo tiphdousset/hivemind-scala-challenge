@@ -18,19 +18,7 @@ object Server {
 
     for {
       client <- BlazeClientBuilder[F](global).stream
-      helloWorldAlg = HelloWorld.impl[F]
-      jokeAlg = Jokes.impl[F](client)
-
-      // Combine Service Routes into an HttpApp.
-      // Can also be done via a Router if you
-      // want to extract a segments not checked
-      // in the underlying routes.
-      httpApp = (
-        Routes.helloWorldRoutes[F](helloWorldAlg) <+>
-          Routes.jokeRoutes[F](jokeAlg)
-      ).orNotFound
-
-      // With Middlewares in place
+      httpApp = Routes.reviewRoutes[F](xa).orNotFound
       finalHttpApp = Logger.httpApp(true, true)(httpApp)
 
       exitCode <- BlazeServerBuilder[F](global)

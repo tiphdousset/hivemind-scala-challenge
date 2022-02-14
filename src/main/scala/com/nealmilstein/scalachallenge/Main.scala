@@ -112,7 +112,7 @@ object Main extends IOApp {
           if (args.length > 0)
             importReviews(args(0), xa).compile.drain.as(IO.unit)
           else IO.unit
-        // _ <- Server.stream[IO](xa).compile.drain.as(ExitCode.Success)
+        _ <- Server.stream[IO](xa).compile.drain.as(ExitCode.Success)
       } yield (ExitCode.Success)
     }
 }

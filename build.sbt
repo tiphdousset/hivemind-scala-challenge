@@ -39,3 +39,7 @@ lazy val root = (project in file("."))
 scalacOptions ~= {
   _.filterNot(Set("-Xfatal-warnings"))
 }
+
+scalacOptions ++= Seq(
+  "-Ymacro-annotations"
+)
