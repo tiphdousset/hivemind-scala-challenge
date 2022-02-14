@@ -43,3 +43,5 @@ scalacOptions ~= {
 scalacOptions ++= Seq(
   "-Ymacro-annotations"
 )
+
+fork in run := true
