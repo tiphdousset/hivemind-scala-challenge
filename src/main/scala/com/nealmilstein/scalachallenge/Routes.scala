@@ -20,6 +20,12 @@ final case class BestRatedRequest(
     min_number_reviews: Int
 )
 
+@JsonCodec
+final case class ProductRatingAverage(
+    asin: String,
+    average_rating: Float
+)
+
 object Routes {
   def reviewRoutes[F[_]: Sync](xa: transactor.Transactor[F]): HttpRoutes[F] = {
     def reverseDate(date: String) = date.split('.').reverse.mkString(".")
@@ -40,16 +46,20 @@ object Routes {
             case Right(requestJson) =>
               for {
                 bestRatings <- sql"""
-                SELECT asin, AVG(overall)
-                FROM reviews
-                WHERE created_at > CAST(${reverseDate(requestJson.start)} AS TIMESTAMP)
-                  AND created_at < CAST(${reverseDate(requestJson.end)} AS TIMESTAMP)
-                GROUP BY asin
-                HAVING COUNT(id) >= ${requestJson.min_number_reviews}
-                ORDER BY AVG DESC
-                LIMIT ${requestJson.limit}
-              """.query[(String, Float)].to[List].transact(xa)
-                resp <- Ok(bestRatings)
+                  SELECT asin, AVG(overall)
+                  FROM reviews
+                  WHERE created_at > CAST(${reverseDate(requestJson.start)} AS TIMESTAMP)
+                    AND created_at < CAST(${reverseDate(requestJson.end)} AS TIMESTAMP)
+                  GROUP BY asin
+                  HAVING COUNT(id) >= ${requestJson.min_number_reviews}
+                  ORDER BY AVG DESC
+                  LIMIT ${requestJson.limit}
+                """.query[(String, Float)].to[List].transact(xa)
+                resp <- Ok(
+                  bestRatings.map(rating =>
+                    ProductRatingAverage(rating._1, rating._2)
+                  )
+                )
               } yield resp
           }
         }
