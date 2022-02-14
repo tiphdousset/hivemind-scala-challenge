@@ -11,6 +11,9 @@ services:
       - POSTGRES_PASSWORD=scalachallenge
   web:
     build: target/docker/stage/
+    entrypoint: ["/opt/docker/bin/scalachallenge", "--", "${REVIEWS:-}"]
+    volumes:
+      - ./test-data:/opt/docker/test-data
     ports:
       - "8080:8080"
     depends_on:
