@@ -10,7 +10,15 @@ services:
       - POSTGRES_USER=scalachallenge
       - POSTGRES_PASSWORD=scalachallenge
   web:
-    build: target/docker/stage/
+    image: mozilla/sbt
+    command: sbt shell
+    working_dir: /app
+    stdin_open: true
+    tty: true
+    volumes:
+      - .:/app
+      - ~/.ivy2:/root/.ivy2
+      - ~/.sbt:/root/.sbt
     ports:
       - "8080:8080"
     depends_on:

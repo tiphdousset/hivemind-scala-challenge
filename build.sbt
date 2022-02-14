@@ -45,3 +45,6 @@ scalacOptions ++= Seq(
 )
 
 fork in run := true
+
+enablePlugins(JavaAppPackaging)
+enablePlugins(DockerPlugin)
