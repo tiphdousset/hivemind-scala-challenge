@@ -59,7 +59,7 @@ object Main extends IOApp {
       _ <- sql"CREATE INDEX reviews_asin ON reviews (asin);".update.run
         .transact(xa)
       _ <-
-        sql"CREATE INDEX reviews_reveiwerID ON reviews (reviewerID);".update.run
+        sql"CREATE INDEX reviews_created_at ON reviews (created_at);".update.run
           .transact(xa)
     } yield ()
   }
