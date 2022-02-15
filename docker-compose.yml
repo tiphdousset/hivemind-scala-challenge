@@ -10,7 +10,7 @@ services:
       - POSTGRES_USER=scalachallenge
       - POSTGRES_PASSWORD=scalachallenge
   web:
-    build: target/docker/stage/
+    image: scalachallenge:0.0.1-SNAPSHOT
     entrypoint: ["/opt/docker/bin/scalachallenge", "--", "${REVIEWS:-}"]
     volumes:
       - ./test-data:/opt/docker/test-data
