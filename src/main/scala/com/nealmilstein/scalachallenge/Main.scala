@@ -125,7 +125,7 @@ object Main extends IOApp {
       for {
         _ <- initSchema(xa)
         _ <-
-          if (args.length > 0 && args(0).trim().length() > 0)
+          if (!args.isEmpty && !args(0).trim().isEmpty)
             importReviews(args(0), xa).compile.drain.as(IO.unit)
           else IO.unit
         _ <- Server.stream[IO](xa).compile.drain.as(ExitCode.Success)
