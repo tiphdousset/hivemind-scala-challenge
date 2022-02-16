@@ -117,7 +117,7 @@ object Main extends IOApp {
         """.update.run.transact(xa))
     }
 
-    infoMessage ++ truncateTable ++ insertReviews;
+    infoMessage ++ truncateTable ++ insertReviews
   }
 
   def run(args: List[String]): IO[ExitCode] =
