@@ -2,8 +2,9 @@ package com.nealmilstein.scalachallenge
 
 import cats.effect.Sync
 import cats.implicits._
+import cats.data.EitherT
 
-import org.http4s.HttpRoutes
+import org.http4s.{HttpRoutes, MessageFailure}
 import org.http4s.dsl.Http4sDsl
 import org.http4s.circe.CirceEntityCodec._
 
@@ -13,6 +14,8 @@ import doobie.util.transactor
 import io.circe._
 import io.circe.generic.JsonCodec
 
+import java.lang.Throwable
+import java.sql.SQLException
 import java.util.Date
 import java.text.{SimpleDateFormat, ParseException}
 
@@ -68,28 +71,33 @@ object Routes {
     val dsl = new Http4sDsl[F] {}
     import dsl._
     HttpRoutes.of[F] { case req @ POST -> Root / "amazon" / "best-rated" =>
+      val bestRatings = for {
+        decoded <- req.attemptAs[BestRatedRequest]
+        dbResult <- EitherT(sql"""
+            SELECT asin, AVG(overall)
+            FROM reviews
+            WHERE created_at > CAST(${decoded.start} AS TIMESTAMP)
+              AND created_at < CAST(${decoded.end} AS TIMESTAMP)
+            GROUP BY asin
+            HAVING COUNT(id) >= ${decoded.min_number_reviews}
+            ORDER BY AVG DESC
+            LIMIT ${decoded.limit}
+          """.query[(String, Float)].to[List].transact(xa).attempt)
+        bestRatings <- EitherT.rightT[F, Throwable](
+          dbResult.map(row => ProductRatingAverage(row._1, row._2))
+        )
+      } yield bestRatings
+
       for {
-        decoded <- req.attemptAs[BestRatedRequest].value
-        resp <- decoded match {
-          case Left(err) => BadRequest(err.message)
-          case Right(bestRatedRequest) =>
-            for {
-              bestRatings <- sql"""
-              SELECT asin, AVG(overall)
-              FROM reviews
-              WHERE created_at > CAST(${bestRatedRequest.start} AS TIMESTAMP)
-                AND created_at < CAST(${bestRatedRequest.end} AS TIMESTAMP)
-              GROUP BY asin
-              HAVING COUNT(id) >= ${bestRatedRequest.min_number_reviews}
-              ORDER BY AVG DESC
-              LIMIT ${bestRatedRequest.limit}
-            """.query[(String, Float)].to[List].transact(xa)
-              resp <- Ok(
-                bestRatings.map(rating =>
-                  ProductRatingAverage(rating._1, rating._2)
-                )
-              )
-            } yield resp
+        either <- bestRatings.value
+        resp <- either match {
+          case Left(err) =>
+            err match {
+              case _: MessageFailure => BadRequest("Invalid JSON request body")
+              case _: SQLException   => InternalServerError("Database error")
+              case _ => InternalServerError("Internal server error")
+            }
+          case Right(ratings) => Ok(ratings)
         }
       } yield resp
     }
