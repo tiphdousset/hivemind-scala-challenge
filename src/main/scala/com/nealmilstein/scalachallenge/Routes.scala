@@ -57,7 +57,7 @@ object BestRatedRequest {
           if (limitInt > 0)
             Right(limitInt)
           else
-            (Left(DecodingFailure("limit must be > 0", c.history)))
+            Left(DecodingFailure("limit must be > 0", c.history))
       } yield limit
   }
 
@@ -70,9 +70,9 @@ object BestRatedRequest {
             if (minNumberReviewsInt > 0)
               Right(minNumberReviewsInt)
             else
-              (Left(
+              Left(
                 DecodingFailure("min_number_reviews must be > 0", c.history)
-              ))
+              )
         } yield minNumberReviews
     }
 
