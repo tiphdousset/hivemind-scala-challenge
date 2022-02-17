@@ -67,11 +67,11 @@ object BestRatedRequest {
         for {
           minNumberReviewsInt <- c.value.as[Int]
           minNumberReviews <-
-            if (minNumberReviewsInt > 0)
+            if (minNumberReviewsInt >= 0)
               Right(minNumberReviewsInt)
             else
               Left(
-                DecodingFailure("min_number_reviews must be > 0", c.history)
+                DecodingFailure("min_number_reviews must be >= 0", c.history)
               )
         } yield minNumberReviews
     }
