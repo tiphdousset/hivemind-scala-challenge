@@ -125,10 +125,22 @@ object Main extends IOApp {
       for {
         _ <- initSchema(xa)
         _ <-
-          if (!args.isEmpty && !args(0).trim().isEmpty)
+          if (!args.isEmpty && !args(0).trim().isEmpty) // You can use nonEmpty instead of !isEmpty
             importReviews(args(0), xa).compile.drain.as(IO.unit)
+          /*         The compiler doesn't know that args is a not empty
+                     Let's imagine that someone refactors the code, and for some reason copy-paste this line and use it somewhere where there is no "if args.nonEmpty"
+                     Then the compiler will *not* warn you that args(0) can crash if args is empty
+                     That's why validating ( = testing if args is empty) + human assumption ( = assuming that args is not empty) is dangerous, and parsing into the correct value is safer
+          */
           else IO.unit
+        /*
+        //     Here is one parsing solution
+                  args.headOption.filter(_.trim.nonEmpty) match {
+                    case Some(jsonFile) => importReviews(jsonFile, xa).compile.drain.as(IO.unit)
+                    case None => IO.unit
+                  }
+        */
         _ <- Server.stream[IO](xa).compile.drain.as(ExitCode.Success)
-      } yield (ExitCode.Success)
+      } yield ExitCode.Success
     }
 }
