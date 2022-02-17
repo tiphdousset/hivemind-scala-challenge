@@ -122,7 +122,7 @@ object Routes {
         resp <- either match {
           case Left(err) =>
             err match {
-              case _: MessageFailure => BadRequest("Invalid JSON request body")
+              case _: MessageFailure => BadRequest("Invalid request body")
               case _: SQLException   => InternalServerError("Database error")
               case _ => InternalServerError("Internal server error")
             }
