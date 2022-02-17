@@ -22,8 +22,8 @@ import java.text.{SimpleDateFormat, ParseException}
 final case class BestRatedRequest(
     start: Date,
     end: Date,
-    limit: Int,
-    min_number_reviews: Int
+    limit: Limit,
+    min_number_reviews: MinNumberReviews
 )
 
 object BestRatedRequest {
@@ -49,13 +49,42 @@ object BestRatedRequest {
       } yield date
   }
 
+  private val limitDecoder: Decoder[Limit] = new Decoder[Limit] {
+    def apply(c: HCursor): Decoder.Result[Limit] =
+      for {
+        limitInt <- c.value.as[Int]
+        limit <-
+          if (limitInt > 0)
+            Right(limitInt)
+          else
+            (Left(DecodingFailure("limit must be > 0", c.history)))
+      } yield limit
+  }
+
+  private val minNumberReviewsDecoder: Decoder[MinNumberReviews] =
+    new Decoder[MinNumberReviews] {
+      def apply(c: HCursor): Decoder.Result[MinNumberReviews] =
+        for {
+          minNumberReviewsInt <- c.value.as[Int]
+          minNumberReviews <-
+            if (minNumberReviewsInt > 0)
+              Right(minNumberReviewsInt)
+            else
+              (Left(
+                DecodingFailure("min_number_reviews must be > 0", c.history)
+              ))
+        } yield minNumberReviews
+    }
+
   implicit val bestRatedRequestDecoder: Decoder[BestRatedRequest] =
     new Decoder[BestRatedRequest] {
       def apply(c: HCursor): Decoder.Result[BestRatedRequest] = for {
         start <- c.downField("start").as[Date]
         end <- c.downField("end").as[Date]
-        limit <- c.downField("limit").as[Int]
-        min_number_reviews <- c.downField("min_number_reviews").as[Int]
+        limit <- c.downField("limit").as[Limit](limitDecoder)
+        min_number_reviews <- c
+          .downField("min_number_reviews")
+          .as[MinNumberReviews](minNumberReviewsDecoder)
       } yield BestRatedRequest(start, end, limit, min_number_reviews)
     }
 }
